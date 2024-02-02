@@ -27,7 +27,7 @@ const registerUser = asyncHandler(async (req, res) => {
     //3.Now to check if user already exists ,to do so we can make use of models created which will
     //directly communicate with mongoDB
 
-    User.findOne({ email }) //one can check this way as well . But while dealing with multiple 
+    //User.findOne({ email }) //one can check this way as well . But while dealing with multiple 
     //fields we can use below method
 
     const existedUser = User.findOne(
