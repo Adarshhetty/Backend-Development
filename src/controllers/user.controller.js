@@ -53,37 +53,37 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (!avatarLocalFilePath)
         throw new ApiError(408, "Avatar image is required !")
+
+    //5. Upload the images to cloudinary
+    const avatar = await uploadOnCloudinary(avatarLocalFilePath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalFilePath)
+
+    //again check if avatar is present or not
+
+    if (!avatar)
+        throw new ApiError(408, "Avatar is required !")
+
+    //6. Add user to DB
+    const user = await User.create({
+        username,
+        email,
+        fullname,
+        password,
+        avatar: avatar.url,
+        coverImage: coverImage?.url || "" //here we have not validated if cover image is present or not so we are preventing DB from crashing
+    })
+    const createdUser = await User.findById(user._id).select(
+        "-password -requestToken"
+    )//What this will do is remove password and refreshToken field white returning the object
+    //which is not required for user to know
+
+    //now check if user is present
+    if (!createdUser)
+        throw new ApiError(500, "Error while registering the user")//Our error so 500 statusCode
+
+    //7. Return the response
+    return res.status(201).json(
+        new ApiResponse(200, createdUser, "User registered successfully !")
+    )
 })
-
-//5. Upload the images to cloudinary
-const avatar = await uploadOnCloudinary(avatarLocalFilePath)
-const coverImage = await uploadOnCloudinary(coverImageLocalFilePath)
-
-//again check if avatar is present or not
-
-if (!avatar)
-    throw new ApiError(408, "Avatar is required !")
-
-//6. Add user to DB
-const user = await User.create({
-    username,
-    email,
-    fullname,
-    password,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "" //here we have not validated if cover image is present or not so we are preventing DB from crashing
-})
-const createdUser = await User.findById(user._id).select(
-    "-password -requestToken"
-)//What this will do is remove password and refreshToken field white returning the object
-//which is not required for user to know
-
-//now check if user is present
-if (!createdUser)
-    throw new ApiError(500, "Error while registering the user")//Our error so 500 statusCode
-
-//7. Return the response
-return res.status(201).json(
-   new ApiResponse(200, createdUser, "User registered successfully !")
-)
 export { registerUser }
