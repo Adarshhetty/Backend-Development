@@ -24,4 +24,14 @@ app.use(express.static("public"))
 //used to setup cookies
 app.use(cookieParser())
 
+//routes import by convention its done here
+import { userRouter } from "./routes/user.route.js";
+
+//Using router
+//how this will work is when api/v1/users is visited it will then hand over control to userRouter
+//Now go to userRouter
+app.use("/api/v1/users",userRouter)
+//http://localhost:8000/api/v1/users/register
+
+
 export {app}

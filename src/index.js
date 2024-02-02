@@ -9,7 +9,7 @@ connectDB()
             console.log("Server error occured",error);
         })
         app.listen(process.env.PORT||8000, () => {
-            console.log(`⚙️  Server running on PORT:${process.env.PORT||8000}`);
+            console.log(`⚙️  Server running on http://localhost:${process.env.PORT||8000}`);
         })
     })
     .catch((error) => {
