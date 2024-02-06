@@ -20,8 +20,9 @@ const registerUser = asyncHandler(async (req, res) => {
     if (
         [username, email, fullname, password].some(
             (fields) => fields?.trim() === "")
-    )
+    ) {
         throw new ApiError(400, "All fields are required !")
+    }
     //this will trim all the whitespaces and check if it is equal to "" i.e empty it will return true
 
     //3.Now to check if user already exists ,to do so we can make use of models created which will
@@ -30,9 +31,9 @@ const registerUser = asyncHandler(async (req, res) => {
     //User.findOne({ email }) //one can check this way as well . But while dealing with multiple 
     //fields we can use below method
 
-    const existedUser = User.findOne(
+    const existedUser = await User.findOne(
         {
-            $or: [{ email }, { username }] //based on your needs
+            $or: [{ username }, { email }] //based on your needs
         }
     ) //As name suggests this will find the first object that has similar credentials
 
@@ -44,25 +45,29 @@ const registerUser = asyncHandler(async (req, res) => {
     //Multer provides additional feature to req that is files inside which we have avatar
     //and cover image and at the first position we have path at which it is stored
     //NOTE:THIS FILE IS NOT YET UPLOADED TO CLOUDINARY ITS JUST UPLAOD TO SERVER RIGHT NOW
-
     const avatarLocalFilePath = req.files?.avatar[0]?.path
-
-    const coverImageLocalFilePath = req.files?.coverImage[0]?.path
+    console.log(avatarLocalFilePath);
+    console.log(req.files);
+    let coverImageLocalFilePath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalFilePath = req.files.coverImage[0].path
+    }
+    console.log(coverImageLocalFilePath);
 
     //Since avatar is required field we have to check if its present or not
 
     if (!avatarLocalFilePath)
-        throw new ApiError(408, "Avatar image is required !")
+        throw new ApiError(406, "Avatar image is required !")
 
     //5. Upload the images to cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalFilePath)
+   
     const coverImage = await uploadOnCloudinary(coverImageLocalFilePath)
-
     //again check if avatar is present or not
-
+    
     if (!avatar)
         throw new ApiError(408, "Avatar is required !")
-
+    
     //6. Add user to DB
     const user = await User.create({
         username,
