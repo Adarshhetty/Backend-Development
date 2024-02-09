@@ -2,6 +2,10 @@ import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 const app=express();
+
+//used to setup cookies
+app.use(cookieParser())
+
 //app.use() is used when you want to configure or setup middlewares
 app.use(cors({
     origin:process.env.CORS_ORIGIN,
@@ -21,8 +25,7 @@ app.use(express.urlencoded({
 //this is used when you want to save certain files sent to server in public folder
 app.use(express.static("public"))
 
-//used to setup cookies
-app.use(cookieParser())
+
 
 //routes import by convention its done here
 import { userRouter } from "./routes/user.route.js";
