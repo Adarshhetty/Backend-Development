@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 
@@ -201,7 +201,7 @@ const requestAccessToken = asyncHandler(async (req, res) => {
         const user = await User.findById(decodedToken?._id)
         if (!user)
             throw new ApiError(401, "Invalid refresh token")
-    
+
         if (incomingRefreshToken !== user?.refreshToken) {
             throw new ApiError(401, "Refresh token is expired or used")
         }
@@ -210,7 +210,7 @@ const requestAccessToken = asyncHandler(async (req, res) => {
             secure: true
         }
         const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(user._id)
-    
+
         return res.status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", newRefreshToken, options)
@@ -222,8 +222,93 @@ const requestAccessToken = asyncHandler(async (req, res) => {
                     "Access token refreshed !")
             )
     } catch (error) {
-        throw new ApiError(401,error?.message||"Invalid refresh token")
+        throw new ApiError(401, error?.message || "Invalid refresh token")
     }
 
 })
-export { registerUser, loginUser, logoutUser,requestAccessToken }
+
+const changePassword = asyncHandler(async (req, res) => {
+    const { username, oldPassword, newPassword } = req.body
+    console.log(username);
+
+    const user = await User.findById(req.user._id)
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Entered password is not correct !")
+    }
+    user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+
+    return res.status(200)
+        .json(
+            new ApiResponse(200, {}, "Password changed successfully")
+        )
+})
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    const user = req.user
+    return res.status(200)
+        .json(
+            new ApiResponse(200, user, "Current user fetched successfully")
+        )
+})
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { username, email } = req.body
+    //console.log(username,email,fullname);
+    if (!username || !email)
+        throw new ApiError(400, "Enter the required fields")
+    // const user = await User.findById(req.user?._id)
+    // user.username = username
+    // user.email = email
+    // user.fullname = fullname
+    // await user.save({ validateBeforeSave: false })
+    //The above step cannot be performed this way as multiple objects are present
+    //so its better to use findByIdAndUpdate()
+    const user = await User.findByIdAndUpdate(req.user?._id, {
+        $set: {
+            username, email
+        }
+    }, {
+        new: true //this will return you updated value object
+    }).select("-password")
+
+    return res.status(200)
+        .json(new ApiResponse(200, user, "User details updated successfully"))
+
+})
+
+const updateImageFile = asyncHandler(async (req, res) => {
+    const localAvatarPath = req.file?.path
+    if (!req.user)
+        throw new ApiError(400, "Unauthorized")
+    const avatarUrl = req.user.avatar
+    if (!localAvatarPath)
+        throw new ApiError(400, "Avatar not found !")
+
+    const avatar = await uploadOnCloudinary(localAvatarPath)
+    if (!avatar)
+        throw new ApiError(400, "Error while updating avatar")
+
+    const user = await User.findByIdAndUpdate(req.user?._id, {
+        $set: {
+            avatar: avatar.url
+        }
+    }, {
+        new: true
+    }
+    ).select("-password")
+    
+    await deleteFromCloudinary(avatarUrl)
+
+    return res.status(200)
+        .json(
+            new ApiResponse(200, user, "Avatar updated successfully")
+        )
+})
+export {
+    registerUser, loginUser,
+    logoutUser, requestAccessToken,
+    changePassword, getCurrentUser,
+    updateAccountDetails, updateImageFile
+}
